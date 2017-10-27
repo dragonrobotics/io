@@ -9,5 +9,5 @@ package org.usfirst.frc.team5002.io;
  */
 @FunctionalInterface
 public interface PipelineStage {
-    public double execute(double input);
+    public double run(double input);
 }

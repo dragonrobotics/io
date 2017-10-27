@@ -64,7 +64,7 @@ public class Pipeline {
      */
     public double run(double input) {
         double result = input;
-        for(PipelineStage step : steps) result = step.execute(result);
+        for(PipelineStage step : steps) result = step.run(result);
         return result;
     }
 
