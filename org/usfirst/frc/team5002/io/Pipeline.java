@@ -1,79 +1,99 @@
 package org.usfirst.frc.team5002.io;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+import org.usfirst.frc.team5002.io.PipelineStage;
 
 /**
  * Class Pipeline represents a pipeline-style dataflow structure in which an
  * input undergoes a series of transformations, such as FOC offset, smoothing,
  * deadband, etc.
  *
- * TODO maybe add remove(), add(PipelineStage, index), clone() methods. We'll
- *      see.
+ * As a major improvement over version 0.0.0.0.0.0.0.0.0.0.0.0.0.0.1, version
+ * 1.0 includes support for generic data types, allowing a pipeline to take in
+ * different data types and output different data types. Also, it allows
+ * intermediate stages to output any data type, and compilation will fail if the
+ * stages don't link together (as opposed to a runtime exception). This leads to
+ * extremely typesafe yet flexible coding, as a pipeline can now accept a
+ * multitude of data types.
+ *
+ * In order to make compile-time type checking possible, Pipelines are now
+ * immutable.
  *
  * @author Brandon Gong
- * @version 0.0.0.0.0.0.0.0.0.0.0.0.0.0.1
+ * @version 1.0
  */
-public class Pipeline {
+public class Pipeline<I, O> {
 
     /**
-     * This ArrayList holds all of the steps of this particular pipeline
-     * instance.
-     */
-    private List<PipelineStage> steps = new ArrayList<>();
+    * This list holds all of the stages in this pipeline.
+    */
+    private List<PipelineStage<?, ?>> stages;
 
     /**
-     * Allows for literate, readable, clean code. Constructs a new
-     * pipeline from the given steps. This replaces having a constructor.
+     * Creates a new pipeline based off a starting value.
+     * TODO I2 and O2 aren't really good names...
      *
-     * @param pipelineStages the stages to create the new pipeline with.
+     * @param stage the stage to initialize the pipeline with.
+     * @return a single-staged pipeline of the given input and output types.
      */
-    public static Pipeline of(PipelineStage... pipelineStages) {
-        return new Pipeline().addAll(pipelineStages);
+    public static <I2, O2> Pipeline<I2, O2> of(PipelineStage<I2, O2> stage) {
+        Pipeline<I2, O2> pipeline = new Pipeline<I2, O2>();
+        pipeline.stages = Collections.singletonList(stage);
+        return pipeline;
     }
 
     /**
-     * Adds a PipelineStage to the list of steps.
-     * Returns this instance so if you want to be a cool kid and chain method
-     * calls like this:
-     * Pipeline p = new Pipeline().add(step1).add(step2);
+     * Adds a stage to the pipeline.
      *
-     * @param pipelineStage the stage to add on to the pipeline.
+     * @param stage the stage to add on.
+     * @return a new pipeline, with the given stage appended.
      */
-    public Pipeline add(PipelineStage pipelineStage) {
-        steps.add(pipelineStage);
-        return this;
+    public <M> Pipeline<I, M> add(PipelineStage<O, M> stage) {
+
+        // Create a new pipeline with the same input type, but the new output
+        // type.
+        Pipeline<I, M> pipeline = new Pipeline<I, M>();
+
+        // initialize that pipeline's stages with the stages of this pipeline,
+        // then add on the new stage.
+        pipeline.stages = new ArrayList<>(this.stages);
+        pipeline.stages.add(stage);
+
+        return pipeline;
     }
 
     /**
-     * However if you ever get tired of being a cool kid you can just call
-     * addAll() and add everything at once.
+     * Run the pipeline with the given value.
      *
-     * @param pipelineStages the stages to add on to the end of the pipeline.
+     * Although \@SuppressWarnings is usually frowned upon, in this case we can go
+     * ahead and do it because we can be sure that the types all match up due to the
+     * way we designed the add() method.
+     *
+     * @param i the input value.
+     * @return the result of the pipeline.
      */
-    public Pipeline addAll(PipelineStage... pipelineStages) {
-        for(PipelineStage pipelineStage : pipelineStages) {
-            steps.add(pipelineStage);
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public O run(I i) {
+
+        // Variable to hold the result of each stage (which subsequently becomes the
+        // input of the next stage)
+        Object data = i;
+
+        // Iterate and execute all stages.
+        for (PipelineStage p : stages) {
+            data = p.execute(data);
         }
-        return this;
+
+        // Have to explicitly cast here to the output value.
+        return (O) data;
     }
 
     /**
-     * Run the pipeline with the specified input.
-     * @param input the input.
+     * Explicitly make the constructor private. Allowing the users to directly
+     * instantiate through the constructor loses type safety.
      */
-    public double run(double input) {
-        double result = input;
-        for(PipelineStage step : steps) result = step.run(result);
-        return result;
-    }
-
-    /**
-     * Simple method overload converts boolean to double before calling
-     * the real run() method. So we don't have to have ternaries sprinkled
-     * all over our code to convert from button inputs to double values.
-     */
-    public double run(boolean input) {
-        return this.run(input ? 1.0 : 0.0);
-    }
+    private Pipeline() {}
 }
