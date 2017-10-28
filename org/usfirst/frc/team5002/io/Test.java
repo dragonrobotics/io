@@ -1,4 +1,4 @@
-package org.usfirst.frc.team5002.io.pipeline;
+package org.usfirst.frc.team5002.io;
 
 /**
  * Temporary test class to demonstrate the new pipeline.
