@@ -1,13 +1,13 @@
 package org.usfirst.frc.team5002.io;
 
 /**
- * One stage in the pipeline process. Each stage takes a double value,
- * transforms it somehow, and spits out another one, which flows to the next
- * pipeline stage.
+ * One stage in the pipeline process.
+ * Now supports generic types for more flexible inputs and outputs.
  *
  * @author Brandon Gong
+ * @version 1.0
  */
 @FunctionalInterface
-public interface PipelineStage {
-    public double run(double input);
+public interface PipelineStage<I, O> {
+    public O execute(I i);
 }
