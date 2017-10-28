@@ -68,20 +68,13 @@ public class Test {
         System.out.println("\n" + pipeline2.run("12") + " " +  pipeline2.run("134355351"));
 
         /*
-         * Method 3: lambda expressions. Not included here because the
-         *excessive amount of method overloading in the primitive wrapper
-         * classes broke java's type inference system.  But we could probably
-         * still use something like this in the actual code.
-         *
-         * Example:
-         *     Pipeline<String, Double> pipeline3 =
-         *             Pipeline.of(input -> Integer.valueOf(input))
-         *                     .add(input -> input == 12)
-         *                     .add(input -> input ? 3.1415926535 : 2.7182818284);
-         *
-         * And that would be the recommended way to do things, because it's so
-         * much cleaner than the previous examples.
+         * Method 3: lambda expressions. Probably the most recommended way to
+         * do things. Clean and concise.
          */
-
+        Pipeline<String, Double> pipeline3 =
+            Pipeline.of((String input) -> Integer.valueOf(input))
+                    .add(input -> input == 12)
+                    .add(input -> input ? 3.1415926535 : 2.7182818284);
+        System.out.println("\n" + pipeline3.run("12") + " " +  pipeline3.run("134355351"));
     }
 }

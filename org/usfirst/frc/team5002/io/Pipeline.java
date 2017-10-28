@@ -68,9 +68,9 @@ public class Pipeline<I, O> {
     /**
      * Run the pipeline with the given value.
      *
-     * Although \@SuppressWarnings is usually frowned upon, in this case we can go
-     * ahead and do it because we can be sure that the types all match up due to the
-     * way we designed the add() method.
+     * Although \@SuppressWarnings is usually frowned upon, in this case we can
+     * go ahead and do it because we can be sure that the types all match up
+     * due to the way we designed the add() method.
      *
      * @param i the input value.
      * @return the result of the pipeline.
