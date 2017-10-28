@@ -72,9 +72,9 @@ public class Test {
          * do things. Clean and concise.
          */
         Pipeline<String, Double> pipeline3 =
-                             Pipeline.of((String input) -> Integer.valueOf(input))
-                                     .add(input -> input == 12)
-                                     .add(input -> input ? 3.1415926535 : 2.7182818284);
+            Pipeline.of((String input) -> Integer.valueOf(input))
+                    .add(input -> input == 12)
+                    .add(input -> input ? 3.1415926535 : 2.7182818284);
         System.out.println("\n" + pipeline3.run("12") + " " +  pipeline3.run("134355351"));
     }
 }
