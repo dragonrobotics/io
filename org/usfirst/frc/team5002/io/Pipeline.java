@@ -40,7 +40,7 @@ public class Pipeline<I, O> {
      * @return a single-staged pipeline of the given input and output types.
      */
     public static <I2, O2> Pipeline<I2, O2> of(PipelineStage<I2, O2> stage) {
-        Pipeline<I2, O2> pipeline = new Pipeline<I2, O2>();
+        Pipeline<I2, O2> pipeline = new Pipeline<>();
         pipeline.stages = Collections.singletonList(stage);
         return pipeline;
     }
@@ -55,7 +55,7 @@ public class Pipeline<I, O> {
 
         // Create a new pipeline with the same input type, but the new output
         // type.
-        Pipeline<I, M> pipeline = new Pipeline<I, M>();
+        Pipeline<I, M> pipeline = new Pipeline<>();
 
         // initialize that pipeline's stages with the stages of this pipeline,
         // then add on the new stage.
