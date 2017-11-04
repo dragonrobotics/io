@@ -38,10 +38,12 @@
 package org.usfirst.frc.team5002.io.config.parse;
 
 import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 import org.usfirst.frc.team5002.io.config.exception.ConfigParseException;
 
 
-class RecursiveDescentParser {
+public class RecursiveDescentParser {
     //! Matches identifiers: any letter, followed by zero or more
     //! letters / digits / hyphens / underscores.
     private static final Pattern identifier = Pattern.compile("[a-zA-Z][\\w[\\-]]*");
@@ -51,24 +53,43 @@ class RecursiveDescentParser {
     private static final Pattern parameter = Pattern.compile("[\\w[\\-]]+");
 
     //! Matches '|->' (token beginning pipeline stages)
-    private static final Pattern stageBegin = Pattern.compile('\\|\\-\\>');
+    private static final Pattern stageBegin = Pattern.compile("\\|\\-\\>");
 
     //! Matches '->|' (token ending pipelines)
-    private static final Pattern pipelineEnd = Pattern.compile('\\-\\>\\|');
+    private static final Pattern pipelineEnd = Pattern.compile("\\-\\>\\|");
 
     //! Matches '::' (token in pipeline input specifiers)
-    private static final Pattern doubleColon = Pattern.compile('\\:\\:');
+    private static final Pattern doubleColon = Pattern.compile("\\:\\:");
+
+    //! Matches whitespace
+    private static final Pattern whitespace = Pattern.compile("\\s+");
 
     private String input;
     private Matcher matcher;
 
     //! Contains the last multicharacter token consumed via the consume(Pattern)
     //! method.
-    private String lastConsumedToken;
+    //! lastConsumedToken.group() will get the actual matched token string.
+    private MatchResult lastConsumedToken;
 
     public RecursiveDescentParser(String input) {
         this.input = input;
-        this.matcher = identifierPattern.matcher(input);
+        this.matcher = identifier.matcher(input);
+    }
+
+    /**
+     * Advances the matcher region past any whitespace found at the beginning
+     * of the matcher region.
+     */
+    private void skipWhitespace() {
+        if(matcher.regionStart() >= input.length()) {
+            return;
+        }
+
+        matcher.usePattern(whitespace);
+        if(matcher.lookingAt()) {
+            matcher.region(matcher.end(), matcher.regionEnd());
+        }
     }
 
     /**
@@ -80,6 +101,12 @@ class RecursiveDescentParser {
      * @param characterToConsume character to find in the matcher region
      */
     private boolean consume(char characterToConsume) {
+        skipWhitespace();
+
+        if(matcher.regionStart() >= input.length()) {
+            return false;
+        }
+
         if(input.charAt(matcher.regionStart()) == characterToConsume) {
             matcher.region(matcher.regionStart()+1, matcher.regionEnd());
             return true;
@@ -93,13 +120,17 @@ class RecursiveDescentParser {
      * This method will advance the matcher region if it does find a match.
      */
     private boolean consume(Pattern tokenToConsume) {
-        if(matcher.pattern() != tokenToConsume) {
-            matcher.usePattern(tokenToConsume);
+        skipWhitespace();
+
+        if(matcher.regionStart() >= input.length()) {
+            return false;
         }
 
+        matcher.usePattern(tokenToConsume);
         if(matcher.lookingAt()) {
-            lastConsumedToken = matcher.group();
+            lastConsumedToken = matcher.toMatchResult();
             matcher.region(matcher.end(), matcher.regionEnd());
+
             return true;
         }
 
@@ -115,7 +146,7 @@ class RecursiveDescentParser {
      * @return true if this token can be found, false otherwise
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean parameter_set() {
+    private boolean parameter_set() throws ConfigParseException {
         if(consume('(')) {
             while(consume(parameter)) {
                 //! TODO: maybe we should save parameter values somewhere?
@@ -142,7 +173,7 @@ class RecursiveDescentParser {
      * @return true if this token can be found, false otherwise
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean parameterized_identifier() {
+    private boolean parameterized_identifier() throws ConfigParseException {
         if(consume(identifier)) {
             //! TODO: save identifier values (along with any parameters)
             //! somewhere, perhaps?
@@ -166,7 +197,7 @@ class RecursiveDescentParser {
      * @return true if this token can be found, false otherwise
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean input_specifier() {
+    private boolean input_specifier() throws ConfigParseException {
         if(consume(identifier)) {
             //! TODO: should probably store input device somewhere
             if(!consume('.')) throw new ConfigParseException(
@@ -200,7 +231,7 @@ class RecursiveDescentParser {
      * @return true if this token can be found, false otherwise
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean pipeline_stage() {
+    private boolean pipeline_stage() throws ConfigParseException {
         if(consume(stageBegin)) {
             if(!parameterized_identifier()) throw new ConfigParseException(
                 "pipeline_stage: expected identifier"
@@ -223,7 +254,7 @@ class RecursiveDescentParser {
      * @return true if this token can be found, false otherwise
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean pipeline_callback() {
+    private boolean pipeline_callback() throws ConfigParseException {
         if(consume(pipelineEnd)) {
             if(!consume(identifier)) throw new ConfigParseException(
                 "pipeline_callback: expected identifier"
@@ -246,7 +277,7 @@ class RecursiveDescentParser {
      * @return true if this token can be found, false otherwise
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean pipeline() {
+    private boolean pipeline() throws ConfigParseException {
         if(input_specifier()) {
             //! TODO: probably should save pipeline input data somewhere
 
@@ -278,7 +309,7 @@ class RecursiveDescentParser {
      * false otherwise
      * @throws ConfigParseException if a syntax error is encountered
      */
-    public static boolean parse(String input) {
+    public static boolean parse(String input) throws ConfigParseException {
         RecursiveDescentParser parser = new RecursiveDescentParser(input);
         return parser.pipeline();
     }
