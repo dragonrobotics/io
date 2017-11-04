@@ -41,7 +41,7 @@ public class LogitechF310 extends InputGroup<Joystick> {
 
     // TODO: FIX NUMBERS ASAP
     @Override
-    public void initMap() {
+    public void initDict() {
         this.add(
             "left_joystick_x",
             new Input<Double, Double>(() -> device.getRawAxis(0)));

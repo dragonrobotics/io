@@ -76,24 +76,4 @@ public class ConfigReader {
         }
         ConfigInterpreter.interpret();
     }
-
-    // TODO: Test method only. delete.
-    public static void main(String[] args) {
-        initializeFromString("                                                             \n"
-            + "gamepad1                                                                    \n"
-            + "    .left_joystick_x                                                        \n"
-            + "         :: always |-> foc -> deadband(0.5) ->| strafe,                     \n"
-            + "                   |->| log,                                                \n"
-            + "    .left_joystick_y                                                        \n"
-            + "         |-> foc-> | forward                                                \n"
-            + "    ;                                                                       \n"
-            + "                                                                            \n"
-            + "# Comment line                                                              \n"
-            + "navx.heading                                                                \n"
-            + "    :: sometimes |-> smoothing -> scaling(5, 6,7, 8) -> asdf ->| value,     \n"
-            + "    :: always |->| log # comments are allowed on the same line as well      \n"
-            + "    ;                                                                       \n"
-        );
-        initializeFromFile("test.pml");
-    }
 }
