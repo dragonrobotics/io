@@ -3,7 +3,7 @@
  * @brief Implements a recursive descent parser for the PML syntax.
  *
  * This file implements a
- * (recursive descent parser)[https://en.wikipedia.org/wiki/Recursive_descent_parser]
+ * [recursive descent parser](https://en.wikipedia.org/wiki/Recursive_descent_parser)
  * for PML syntax, defined by the following EBNF:
  * ```ebnf
  * letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
