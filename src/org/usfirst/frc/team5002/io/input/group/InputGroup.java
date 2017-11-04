@@ -22,11 +22,8 @@
 
 package org.usfirst.frc.team5002.io.input.group;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Pattern;
-
 import org.usfirst.frc.team5002.io.input.base.Input;
+import org.usfirst.frc.team5002.io.util.VerifiedDictionary;
 
 /**
  * InputGroup.java : defines the base InputGroup type.
@@ -47,7 +44,7 @@ public abstract class InputGroup<T> {
     /**
      * Holds all of the key names and their corresponding Inputs.
      */
-    protected Map<String, Input<?, ?>> controlMap;
+    protected VerifiedDictionary<Input<?, ?>> dict;
 
     /**
      * Holds the instance of the device class the inputs call.
@@ -55,34 +52,22 @@ public abstract class InputGroup<T> {
     protected T device;
 
     /**
-     * Keys cannot contain ->, |, :, ;, #, commas, periods, parentheses, or
-     * whitespace.
-     */
-    private final Pattern keyVer =
-        Pattern.compile("->|\\||:|;|#|,|\\.|\\(|\\)|\\s");
-
-    /**
-     * The maximum capacity of this input group.  Set for performance reasons.
-     */
-    private static final int MAP_CAPACITY = 50;
-
-    /**
      * Construct with the given device instance.
-     * This automatically initializes and populates the map.
+     * This automatically initializes and populates the dictionary.
      *
      * @param device the internal instance of the input device.
      */
     public InputGroup(T device) {
         this.device = device;
-        this.controlMap = new HashMap<>(MAP_CAPACITY);
-        this.initMap();
+        this.dict = new VerifiedDictionary<>();
+        this.initDict();
     }
 
     /**
-     * get the map of all of the inputs.
+     * get the dictionary of all of the inputs.
      */
-    public Map<String, Input<?, ?>> getMap() {
-        return this.controlMap;
+    public VerifiedDictionary<Input<?, ?>> getDict() {
+        return this.dict;
     }
 
     /**
@@ -93,35 +78,15 @@ public abstract class InputGroup<T> {
     }
 
     /**
-     * Add a key-value pair to the hash map.
-     * We choose not to use the built-in <code>put()</code> method because
-     * we want to do our own validity checks on the keys.
+     * Add a key-value pair to the dictionary.
      */
     public void add(String key, Input<?, ?> value) {
-
-        // no null values, duplicate keys, or illegal characters allowed.
-        if(value == null) {
-            throw new IllegalArgumentException(
-                "`value` argument must not be null."
-            );
-        } else if(this.controlMap.containsKey(key)) {
-            throw new IllegalArgumentException(
-                "Bad key: Duplicate key already exists in control map."
-            );
-        } else if(keyVer.matcher(key).find()) {
-            throw new IllegalArgumentException(
-                "Bad key: Key contains illegal characters."
-            );
-        } else {
-            // assuming it's passed all of those checks, now call
-            // <code>put()</code> to add it to the map.
-            this.controlMap.put(key, value);
-        }
+        this.dict.add(key, value);
     }
 
     /**
-     * Use this method to populate the map with key and value pairs.
+     * Use this method to populate the dictionary values.
      * This is called automatically when the object is constructed.
      */
-    public abstract void initMap();
+    public abstract void initDict();
 }
