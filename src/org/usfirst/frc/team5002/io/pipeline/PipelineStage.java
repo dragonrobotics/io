@@ -1,4 +1,4 @@
-package org.usfirst.frc.team5002.io;
+package org.usfirst.frc.team5002.io.pipeline;
 
 /**
  * One stage in the pipeline process.
