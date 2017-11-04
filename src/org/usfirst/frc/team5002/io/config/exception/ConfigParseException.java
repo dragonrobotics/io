@@ -22,19 +22,28 @@
 
 package org.usfirst.frc.team5002.io.config.exception;
 
+/**
+ * ConfigParseException.java : Defines a custom exception type for parse
+ * exceptions.
+ *
+ * There's nothing really special in this class, it just makes calls to the
+ * Exception superclass.
+ *
+ * @author Brandon Gong
+ * @version 1.0.0
+ * Date: 11.3.17
+ */
 public class ConfigParseException extends Exception {
-
     public ConfigParseException() {
-          super();
-      }
-      public ConfigParseException(String message) {
-          super(message);
-      }
-      public ConfigParseException(String message, Throwable cause) {
-          super(message, cause);
-      }
-      public ConfigParseException(Throwable cause) {
-          super(cause);
-      }
-
+        super();
+    }
+    public ConfigParseException(String message) {
+        super(message);
+    }
+    public ConfigParseException(String message, Throwable cause) {
+        super(message, cause);
+    }
+    public ConfigParseException(Throwable cause) {
+        super(cause);
+    }
 }

@@ -22,19 +22,40 @@
 
 package org.usfirst.frc.team5002.io.config.parse;
 
+/**
+ * ConfigInterpreter can be viewed as a decorator class for Parser; it adds on a
+ * preprocessor which accepts config line-by-line, and also adds on an
+ * interpret method which searches through hashmaps based on the return value
+ * of the parser and automatically builds the pipelines.
+ *
+ * @author Brandon Gong
+ * @version 1.0.0
+ * Date: 11.3.17
+ */
 public class ConfigInterpreter {
 
-    public static String preprocessed = "";
+    // Preprocessor container string.
+    private static String preprocessed = "";
 
+    /**
+     * Read and preprocess the next line.
+     * @param line The line of config to read.
+     */
     public static void readNextLine(String line) {
+
+        // Remove all comments and whitespace.
         line = line.replaceAll("\\s", "");
         int commentBlockIndex = line.indexOf('#');
-        preprocessed += (commentBlockIndex != -1) ? line.substring(0, commentBlockIndex) : line;
+
+        // TODO: substring to the next newline, not the end of the line.
+        preprocessed += (commentBlockIndex != -1)
+            ? line.substring(0, commentBlockIndex)
+            : line;
     }
 
+    // TODO: implement.
     public static void interpret() {
         System.out.println(Parser.parse(preprocessed).toString());
         preprocessed = "";
     }
-
 }
