@@ -9,6 +9,7 @@
 
 package org.usfirst.frc.team5002.io.config.parse;
 
+import java.util.ArrayList;
 import java.util.regex.Pattern;
 import org.usfirst.frc.team5002.io.config.parse.RecursiveDescentParser;
 import org.usfirst.frc.team5002.io.config.exception.ConfigParseException;
@@ -21,66 +22,61 @@ import org.usfirst.frc.team5002.io.config.exception.ConfigParseException;
  * @date 04-Nov-2017
  */
 class RDParserTest {
-    private static void testOutput(String input, boolean status, boolean exp) {
-        System.out.println(
-            input
-            + "\n    parse status: " + String.valueOf(status)
-            + " (should be "+String.valueOf(exp)+")"
-        );
-    }
-
-    private static void testOutput(
-        String input, ConfigParseException e, boolean exp)
-    {
-        System.out.println(
-            input
-            + "\n    parse status: syntax error - "
-            + e.getMessage()
-            + " (should be "+String.valueOf(exp)+")"
-        );
-    }
-
-    private static void syntaxErrOutput(String input, boolean status) {
-        System.out.println(
-            input
-            + "\n    parse status: " + String.valueOf(status)
-            + " (should be a syntax error)"
-        );
-    }
-
     private static void syntaxErrOutput(String input, ConfigParseException e) {
         System.out.println(
             input
-            + "\n    parse status: syntax error - "
+            + "\n    parse status: syntax error: \n"
             + e.getMessage()
-            + " (should be a syntax error)"
         );
+    }
+
+    private static void displayPipelineSpec(PipelineSpecification spec) {
+        System.out.println("Device: " + spec.device());
+        System.out.println("Input: " + spec.input());
+        System.out.println("Filter: " + spec.filter());
+        System.out.println("Stages:");
+        for(ParameterizedIdentifier stage : spec.stages()) {
+            System.out.println("    " + stage.toString());
+        }
+        System.out.println("Callback: " + spec.callback());
+    }
+
+    private static void parsingTest(String input) {
+        try {
+            ArrayList<PipelineSpecification> test
+                = RecursiveDescentParser.parse(input);
+
+            System.out.println("Parse of: ");
+            System.out.println(input);
+            System.out.println("--------------");
+            int i=0;
+            for (PipelineSpecification spec : test) {
+                i++;
+                System.out.println("Specification "+String.valueOf(i)+':');
+                displayPipelineSpec(spec);
+                System.out.println("--------------");
+            }
+        } catch(ConfigParseException e) {
+            syntaxErrOutput(input, e);
+            System.out.println("--------------");
+        }
     }
 
     public static void main(String[] args) {
         String parserTest1 = "gamepad1.left_joystick_y :: always  |-> foc ->| forward;";
         String parserTest2 = "10";
         String parserTest3 = "this.causes :: an |-> error";
+        String parserTest4 =
+            "gamepad1.right_joystick_x\n"+
+            "   :: always |->| logging, # note the comma at the end of this line.\n"+
+            "   # and the semicolon terminating the whole statement.\n"+
+            "   :: changed |-> deadband(0.01) |-> FOC ->| twist;\n";
+        String parserTest5 = "gamepad1.right_joystick_x :: |->| logging";
 
-        try {
-            boolean test1 = RecursiveDescentParser.parse(parserTest1);
-            testOutput(parserTest1, test1, true);
-        } catch(ConfigParseException e) {
-            testOutput(parserTest1, e, true);
-        }
-
-        try {
-            boolean test2 = RecursiveDescentParser.parse(parserTest2);
-            testOutput(parserTest2, test2, false);
-        } catch(ConfigParseException e) {
-            testOutput(parserTest2, e, false);
-        }
-
-        try {
-            boolean test3 = RecursiveDescentParser.parse(parserTest3);
-            syntaxErrOutput(parserTest3, test3);
-        } catch(ConfigParseException e) {
-            syntaxErrOutput(parserTest3, e);
-        }
+        parsingTest(parserTest1);
+        parsingTest(parserTest2);
+        parsingTest(parserTest3);
+        parsingTest(parserTest4);
+        parsingTest(parserTest5);
     }
 }
