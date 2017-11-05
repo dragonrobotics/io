@@ -33,7 +33,7 @@
  * input = '.', ident_or_param, process_set;
  * input_set = input, {',', input};
  *
- * pipeline = ident_or_param, input_set;
+ * pipeline = ident_or_param, input_set, ';';
  * ```
  *
  * @author Sebastian Mobo
@@ -66,8 +66,8 @@ public class RecursiveDescentParser {
     //! Matches '::' (token in pipeline input specifiers)
     private static final Pattern doubleColon = Pattern.compile("\\:\\:");
 
-    //! Matches whitespace
-    private static final Pattern whitespace = Pattern.compile("\\s+");
+    //! Matches whitespace and comments
+    private static final Pattern skipspace = Pattern.compile("\\s*#[^\\n]*\\n");
 
     private String input;
     private Matcher matcher;
@@ -83,15 +83,15 @@ public class RecursiveDescentParser {
     }
 
     /**
-     * Advances the matcher region past any whitespace found at the beginning
-     * of the matcher region.
+     * Advances the matcher region past any whitespace or comments
+     * found at the beginning of the matcher region.
      */
     private void skipWhitespace() {
         if(matcher.regionStart() >= input.length()) {
             return;
         }
 
-        matcher.usePattern(whitespace);
+        matcher.usePattern(skipspace);
         if(matcher.lookingAt()) {
             matcher.region(matcher.end(), matcher.regionEnd());
         }
@@ -148,24 +148,28 @@ public class RecursiveDescentParser {
      * The rule defining parameter sets is:
      * `parameter_set = '(', { parameter, ',' }, parameter, ')';`
      *
-     * @return true if this token can be found, false otherwise
+     * @return an ArrayList of Strings containing the given parameters
+     * (if any) in order; can be an empty list. Returns null if not matching.
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean parameter_set() throws ConfigParseException {
+    private ArrayList<String> parameter_set() throws ConfigParseException {
         if(consume('(')) {
+            ArrayList<String> returnList = new ArrayList<String>();
             while(consume(parameter_identifier)) {
-                //! TODO: maybe we should save parameter values somewhere?
+                returnList.add(lastConsumedToken.group());
+
                 if(consume(')')) {
-                    return true;
+                    return returnList;
                 } else if(!consume(',')) {
                     throw new ConfigParseException("parameter_set: expected ','");
                 }
             }
+
             throw new ConfigParseException(
                 "parameter_set: expected at least one parameter"
             );
         } else {
-            return false;
+            return null;
         }
     }
 
@@ -175,18 +179,29 @@ public class RecursiveDescentParser {
      * The rule defining parameterized identifiers is:
      * `parameterized_identifier = identifier, [parameter_set];`
      *
-     * @return true if this token can be found, false otherwise
+     * @return a ParameterizedIdentifier object containing info about the parsed
+     * identifier / parameter set. Returns null if not matching.
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean parameterized_identifier() throws ConfigParseException {
+    private ParameterizedIdentifier parameterized_identifier()
+        throws ConfigParseException
+    {
         if(consume(parameter_identifier)) {
-            //! TODO: save identifier values (along with any parameters)
-            //! somewhere, perhaps?
+            String identifier = lastConsumedToken.group();
+            ArrayList<String> parameters = parameter_set();
 
-            parameter_set(); // optional; disregard return value for now
-            return true;
+            if(parameters == null) {
+                parameters = new ArrayList<String>();
+            }
+
+
+            ParameterizedIdentifier data = new ParameterizedIdentifier(
+                identifier, parameters
+            );
+
+            return data;
         } else {
-            return false;
+            return null;
         }
     }
 
@@ -196,20 +211,20 @@ public class RecursiveDescentParser {
      * The rule defining pipeline stages is:
      * `pipeline_stage = '|->', parameterized_identifier;`
      *
-     * @return true if this token can be found, false otherwise
+     * @return a ParameterizedIdentifier containing info on the parsed stage,
+     * or null if not matched.
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean pipeline_stage() throws ConfigParseException {
+    private ParameterizedIdentifier pipeline_stage() throws ConfigParseException {
         if(consume(stageBegin)) {
-            if(!parameterized_identifier()) throw new ConfigParseException(
+            ParameterizedIdentifier retn = parameterized_identifier();
+            if(retn == null) throw new ConfigParseException(
                 "pipeline_stage: expected identifier"
             );
 
-            //! TODO: save stage data somewhere?
-
-            return true;
+            return retn;
         } else {
-            return false;
+            return null;
         }
     }
 
@@ -217,22 +232,20 @@ public class RecursiveDescentParser {
      * Attempts to match a pipeline callback specifier.
      *
      * The rule defining pipeline stages is:
-     * `pipeline_callback = '->|', identifier;`
+     * `pipeline_callback = '->|', ident_or_param;`
      *
-     * @return true if this token can be found, false otherwise
+     * @return the callback identifier if matched; null otherwise.
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean pipeline_callback() throws ConfigParseException {
+    private String pipeline_callback() throws ConfigParseException {
         if(consume(pipelineEnd)) {
             if(!consume(parameter_identifier)) throw new ConfigParseException(
                 "pipeline_callback: expected identifier"
             );
 
-            //! TODO: save pipeline callback name somewhere?
-
-            return true;
+            return lastConsumedToken.group();
         } else {
-            return false;
+            return null;
         }
     }
 
@@ -243,36 +256,143 @@ public class RecursiveDescentParser {
      * `pipeline_sequence =
      *      '|->|', pipeline_callback
      *      | pipeline_stage, { pipeline_stage }, pipeline_callback;`
+     * This method will also fill in the provided PipelineSpecification object
+     * with information about the pipeline sequence.
+     *
+     * @param spec a PipelineSpecification to be filled in when parsing.
+     * @return true if a pipeline sequence could be matched; false otherwise
      */
-    private boolean pipeline_sequence() throws ConfigParseException {
+    private boolean pipeline_sequence(PipelineSpecification spec)
+        throws ConfigParseException
+    {
         if(consume(pipelineIdentity)) {
-            if(!consume(pipeline_callback)) throw new ConfigParseException(
+            String callbackIdentifier = pipeline_callback();
+            if(callbackIdentifier == null) throw new ConfigParseException(
                 "pipeline_sequence: expected pipeline callback specifier"
             );
-        } else if(pipeline_stage()) {
-            while(pipeline_stage()) {};
 
-            if(!consume(pipeline_callback)) throw new ConfigParseException(
+            spec.setStages(new ArrayList<ParameterizedIdentifier>());
+            spec.setCallback(callbackIdentifier);
+
+            return true;
+        } else {
+            ParameterizedIdentifier stageData = pipeline_stage();
+            if(stageData == null) return false;
+
+            ArrayList<ParameterizedIdentifier> stageList =
+                new ArrayList<ParameterizedIdentifier>();
+
+            stageList.add(stageData);
+            while(stageData = pipeline_stage()) {
+                stageList.add(stageData);
+            };
+
+            String callback = pipeline_callback();
+            if(callback == null) throw new ConfigParseException(
                 "pipeline_sequence: expected pipeline callback specifier"
             );
-        } else {
-            return false;
+
+            spec.setStages(stageList);
+            spec.setCallback(callback);
+
+            return true;
         }
     }
 
     /**
      * Attempts to match a pipeline process specification.
      *
+     * This method will return a PipelineSpecification containing info about the
+     * parsed specification, using the provided device and input names, and
+     * potentially also using the provided default filter.
+     *
      * The rule defining these is:
      * `process = '::', [parameterized_identifier], pipeline_sequence;`.
+     *
+     * @return a complete PipelineSpecification containing info about
+     * the parsed specification
+     * @param device the input device for the specification
+     * @param input the input name for the specification
+     * @param defaultFilter the filter to use for the specification (if one
+     * is not provided in the specification itself)
      */
-    private boolean process() throws ConfigParseException {
+    private PipelineSpecification process(
+        String device, String input, ParameterizedIdentifier defaultFilter)
+        throws ConfigParseException
+    {
         if(consume(doubleColon)) {
-            parameterized_identifier();
+            ParameterizedIdentifier filter = parameterized_identifier();
+            if(filter == null) filter = defaultFilter;
 
-            if(!pipeline_sequence()) throw new ConfigParseException(
+            PipelineSpecification spec = new PipelineSpecification(
+                device, input, filter
+            );
+
+            if(!pipeline_sequence(spec)) throw new ConfigParseException(
                 "process: expected pipeline sequence"
             );
+
+            return spec;
+        }
+
+        return null;
+    }
+
+    /**
+     * Attempts to match a pipeline process set.
+     *
+     * This method will _add_ the parsed PipelineSpecifications to the
+     * given list.
+     *
+     * The rule defining these is:
+     * `process_set = process, {',', process};`
+     *
+     * @param device the input device for specifications
+     * @param input the input name for specifications
+     * @param specList a list of PipelineSpecifications to add to
+     * @return true if a process set could be matched; false otherwise
+     */
+    private boolean process_set(
+        String device, String input, ArrayList<PipelineSpecification> specList
+    ) throws ConfigParseException
+    {
+        ParameterizedIdentifier defaultFilter = new ParameterizedIdentifier(
+            "change", new ArrayList<String>()
+        );
+
+        PipelineSpecification spec = process(device, input, defaultFilter);
+        if(spec) {
+            specList.add(spec);
+
+            // chained pipeline specs reuse filters
+            defaultFilter = spec.filter();
+
+            while(consume(',')) {
+                spec = process();
+
+                if(spec == null) {
+                    /* The language spec is slightly ambiguous here;
+                     * the following token could be either a process spec
+                     * or a new input spec-- we have to disambiguate by looking
+                     * ahead by one token, without consuming it.
+                     */
+                    if(matcher.regionStart() < input.length() &&
+                        (
+                            input.charAt(matcher.regionStart()) == '.' ||
+                            input.charAt(matcher.regionStart()) == ';'
+                        )
+                    ) {
+                        break; // this is not a new process spec -- exit
+                    } else {
+                        throw new ConfigParseException(
+                            "process_set: expected pipeline process specification"
+                        );
+                    }
+                }
+
+                specList.add(spec);
+                defaultFilter = spec.filter();
+            }
 
             return true;
         }
@@ -281,16 +401,28 @@ public class RecursiveDescentParser {
     }
 
     /**
-     * Attempts to match a pipeline process set.
+     * Attempts to parse a single input specification.
      *
-     * The rule defining these is:
-     * `process_set = process, {',', process};`
+     * This method will _add_ any parsed PipelineSpecifications to the
+     * given list.
+     *
+     * @param device the input device for specifications
+     * @param specList a list of PipelineSpecifications to add to
+     * @return true if an input could be matched; false otherwise
      */
-    private boolean process_set() throws ConfigParseException {
-        if(process()) {
-            while(consume(',')) {
-                if(!process()) throw new ConfigParseException(
-                    "process_set: expected pipeline process specification"
+    private boolean input(
+        String device, ArrayList<PipelineSpecification> specList
+    ) throws ConfigParseException {
+        if(consume('.')) {
+            if(!consume(parameter_identifier)) throw new ConfigParseException(
+                "input: expected identifier"
+            );
+
+            String input = lastConsumedToken.group();
+
+            if(!process_set(device, input, specList)) {
+                throw new ConfigParseException(
+                    "input: expected pipeline process specification set"
                 );
             }
 
@@ -300,24 +432,22 @@ public class RecursiveDescentParser {
         return false;
     }
 
-    private boolean input() throws ConfigParseException {
-        if(consume('.')) {
-            if(!consume(parameter_identifier)) throw new ConfigParseException(
-                "input: expected identifier"
-            );
-
-            if(!process_set) throw new ConfigParseException(
-                "input: expected pipeline process specification set"
-            );
-        }
-
-        return false;
-    }
-
-    private boolean input_set() throws ConfigParseException {
-        if(input()) {
+    /**
+     * Attempts to parse a set of input specifications.
+     *
+     * This method will _add_ any parsed PipelineSpecifications to the
+     * given list.
+     *
+     * @param device the input device for specifications
+     * @param specList a list of PipelineSpecifications to add to
+     * @return true if an input set could be matched; false otherwise
+     */
+    private boolean input_set(
+        String device, ArrayList<PipelineSpecification> specList
+    ) throws ConfigParseException {
+        if(input(device, specList)) {
             while(consume(',')) {
-                if(!input()) throw new ConfigParseException(
+                if(!input(device, specList)) throw new ConfigParseException(
                     "input_set: expected pipeline input specification"
                 );
             }
@@ -329,38 +459,55 @@ public class RecursiveDescentParser {
     }
 
     /**
-     * Attempts to match a pipeline definition.
+     * Attempts to parse a single pipeline specification.
      *
-     * The rule defining pipeline definitions is:
-     * `pipeline = input_specifier, { pipeline_stage }, pipeline_callback;`
-     *
-     * @return true if this token can be found, false otherwise
+     * @return a list of parsed PipelineSpecifications from the next parsed
+     * pipeline specification, or null if one could not be parsed.
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private boolean pipeline() throws ConfigParseException {
-        if(!consume(parameter_identifier)) {
-            //! TODO: probably should save pipeline input device somewhere
-
-            if(!input_set()) throw new ConfigParseException(
-                "pipeline: expected pipeline input set"
-            );
-
-            return true;
+    private ArrayList<PipelineSpecification> pipeline() {
+        if(!parser.consume(parameter_identifier)) {
+            return null;
         }
 
-        return false;
+        ArrayList<PipelineSpecification> specList
+            = new ArrayList<PipelineSpecification>();
+
+        if(!input_set()) throw new ConfigParseException(
+            "pipeline: expected pipeline input set"
+        );
+
+        if(consume(';') || matcher.regionStart() == input.length()) {
+            return specList;
+        } else {
+            throw new ConfigParseException(
+                "pipeline: expected terminating semicolon or EOF"
+            );
+        }
+
+        return null;
     }
 
     /**
-     * Attempts to parse a pipeline specification.
+     * Attempts to parse a set of pipeline specifications.
      *
-     * @param input a string containing a pipeline specification to parse
-     * @return true if the string contained a valid pipeline specification,
-     * false otherwise
+     * @param input a string containing pipeline specifications to parse
+     * @return a list of PipelineSpecifications from all parsed specifications
+     * in the string.
      * @throws ConfigParseException if a syntax error is encountered
      */
-    public static boolean parse(String input) throws ConfigParseException {
+    public static ArrayList<PipelineSpecification> parse(String input)
+        throws ConfigParseException
+    {
         RecursiveDescentParser parser = new RecursiveDescentParser(input);
-        return parser.pipeline();
+        ArrayList<PipelineSpecification> specList
+            = new ArrayList<PipelineSpecification>();
+
+        ArrayList<PipelineSpecification> subList;
+        while(subList = parser.pipeline()) {
+            specList.add(subList);
+        }
+
+        return specList;
     }
 }
