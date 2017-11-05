@@ -146,6 +146,25 @@ public class RecursiveDescentParser {
     }
 
     /**
+     * Tests the very next character in the matcher region.
+     *
+     * This does not advance the matcher region when a match is found,
+     * but it does skip whitespace.
+     */
+    private boolean peek(char characterToTest) {
+        skipWhitespace();
+
+        if(matcher.regionStart() >= input.length()) {
+            return false;
+        }
+
+        if(input.charAt(matcher.regionStart()) == characterToTest) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Attempts to match a parameter set.
      *
      * The rule defining parameter sets is:
@@ -223,7 +242,7 @@ public class RecursiveDescentParser {
      */
     private ParameterizedIdentifier pipeline_stage() throws ConfigParseException {
         if(consume(stageBegin)) {
-            if(consume('|')) {
+            if(peek('|')) {
                 // we just matched ->|.
                 // backtrack three characters so we can match the pipeline end
                 matcher.region(matcher.regionStart()-3, matcher.regionEnd());
@@ -384,7 +403,7 @@ public class RecursiveDescentParser {
     ) throws ConfigParseException
     {
         ParameterizedIdentifier defaultFilter = new ParameterizedIdentifier(
-            "change", new ArrayList<String>()
+            "changed", new ArrayList<String>()
         );
 
         PipelineSpecification spec = process(device, input, defaultFilter);
@@ -398,10 +417,15 @@ public class RecursiveDescentParser {
                 spec = process(device, input, defaultFilter);
 
                 if(spec == null) {
-                    throw new ConfigParseException(
-                        "process_set: expected pipeline process specification"
-                        +parseErrorInfo()
-                    );
+                    if(peek('.')) {
+                        // this is a new input specification
+                        break;
+                    } else {
+                        throw new ConfigParseException(
+                            "process_set: expected pipeline process specification or input specification"
+                            +parseErrorInfo()
+                        );
+                    }
                 }
 
                 specList.add(spec);
@@ -462,12 +486,7 @@ public class RecursiveDescentParser {
         String device, ArrayList<PipelineSpecification> specList
     ) throws ConfigParseException {
         if(input(device, specList)) {
-            while(consume(',')) {
-                if(!input(device, specList)) throw new ConfigParseException(
-                    "input_set: expected pipeline input specification"
-                    +parseErrorInfo()
-                );
-            }
+            while(input(device, specList)) {}
 
             return true;
         }
@@ -523,23 +542,24 @@ public class RecursiveDescentParser {
 
         if(matcher.lookingAt()) restOfLine = matcher.group();
 
-        matcher.usePattern(Pattern.compile("(\\n)"));
-        matcher.region(0, matcher.regionEnd());
+        matcher.usePattern(Pattern.compile("(^.+)", Pattern.MULTILINE));
+        matcher.reset();
 
         int lineNo;
         int linePos;
         String errorLine;
 
-        if(matcher.find()) {
+        matcher.matches();
+        if(matcher.groupCount() > 1) {
             lineNo = matcher.groupCount();
             linePos = matcher.start(matcher.groupCount()) - currentAbsPos;
-            for(int i=0;i<matcher.groupCount()-1;i++) {
+            for(int i=1;i<matcher.groupCount();i++) {
                 int lineStartAbs = matcher.start(i);
                 int lineEndAbs = matcher.start(i+1);
 
                 if(lineStartAbs <= currentAbsPos && lineEndAbs >= currentAbsPos) {
                     lineNo = i;
-                    linePos = lineStartAbs - currentAbsPos;
+                    linePos = currentAbsPos - lineStartAbs;
                     break;
                 }
             }
@@ -556,7 +576,7 @@ public class RecursiveDescentParser {
             // single-line
             lineNo = 0;
             linePos = currentAbsPos;
-            errorLine = input;
+            restOfLine = errorLine = input;
         }
 
 
@@ -567,12 +587,13 @@ public class RecursiveDescentParser {
         .append(':')
         .append(linePos)
         .append(" : \n")
-        .append(errorLine)
+        .append(restOfLine);
+        /*.append(errorLine)
         .append('\n');
 
         // fill with spaces to linePos
         for(int i=0;i<linePos-1;i++) b.append(' ');
-        b.append("^");
+        b.append("^");*/
 
         return b.toString();
     }

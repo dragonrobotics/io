@@ -69,11 +69,24 @@ class RDParserTest {
             "   # and the semicolon terminating the whole statement.\n"+
             "   :: changed |-> deadband(0.01) |-> FOC ->| twist;\n";
 
+        String parserTest6 =
+        "gamepad1\n"+
+        "   .right_joystick_x\n"+
+        "   :: always |->| logging,\n"+
+        "   # filter should still be \"always\" because we set it on the previous line\n"+
+        "   :: |-> deadband(0.01) -> FOC ->| twist,\n"+
+        "   # filter should be \"changed\" here\n"+
+        "   # -- we switched an input, so we go back to the default filter\n"+
+        "   .right_joystick_button\n"+
+        "   :: |->| updateSomething;\n";
+
         parsingTest("gamepad1.left_joystick_y :: always  |-> foc ->| forward;");
         parsingTest("10");
         parsingTest("this.causes :: an |-> error");
         parsingTest("this.however :: is -> not -> an ->| error");
         parsingTest(parserTest4);
         parsingTest("gamepad1.right_joystick_x :: |->| logging");
+        parsingTest(parserTest6);
+        parsingTest("gamepad1.right_joystick_x :: |->| test .right_joystick_button :: |->| test");
     }
 }
