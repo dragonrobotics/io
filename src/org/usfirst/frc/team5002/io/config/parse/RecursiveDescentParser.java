@@ -17,17 +17,23 @@
  * digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
  * character = letter | digit | "_" | "-";
  *
- * identifier = letter, { character };
- * parameter = character, { character };
+ * ident_or_param = character, { character };
  *
- * parameter_set = '(', { parameter, ',' }, parameter, ')';
- * parameterized_identifier = identifier, [parameter_set];
+ * parameter_set = '(', { ident_or_param, ',' }, ident_or_param, ')';
+ * parameterized_identifier = ident_or_param, [parameter_set];
  *
- * input_specifier = identifier, '.', identifier, '::', [parameterized_identifier];
  * pipeline_stage = '|->', parameterized_identifier;
- * pipeline_callback = '->|', identifier;
+ * pipeline_callback = '->|', ident_or_param;
+ * pipeline_sequence = '|->|', pipeline_callback
+ *                     | pipeline_stage, { pipeline_stage }, pipeline_callback;
  *
- * pipeline = input_specifier, { pipeline_stage }, pipeline_callback, ';';
+ * process = '::', [parameterized_identifier], pipeline_sequence;
+ * process_set = process, {',', process};
+ *
+ * input = '.', ident_or_param, process_set;
+ * input_set = input, {',', input};
+ *
+ * pipeline = ident_or_param, input_set;
  * ```
  *
  * @author Sebastian Mobo
@@ -44,19 +50,18 @@ import org.usfirst.frc.team5002.io.config.exception.ConfigParseException;
 
 
 public class RecursiveDescentParser {
-    //! Matches identifiers: any letter, followed by zero or more
+    //! Matches parameter and identifier values: a sequence of one or more
     //! letters / digits / hyphens / underscores.
-    private static final Pattern identifier = Pattern.compile("[a-zA-Z][\\w[\\-]]*");
-
-    //! Matches parameter values: a sequence of one or more
-    //! letters / digits / hyphens / underscores.
-    private static final Pattern parameter = Pattern.compile("[\\w[\\-]]+");
+    private static final Pattern parameter_identifier = Pattern.compile("[\\w[\\-]]+");
 
     //! Matches '|->' (token beginning pipeline stages)
     private static final Pattern stageBegin = Pattern.compile("\\|\\-\\>");
 
     //! Matches '->|' (token ending pipelines)
     private static final Pattern pipelineEnd = Pattern.compile("\\-\\>\\|");
+
+    //! Matches '|->|' (token for empty pipelines)
+    private static final Pattern pipelineIdentity = Pattern.compile("\\|\\-\\>\\|");
 
     //! Matches '::' (token in pipeline input specifiers)
     private static final Pattern doubleColon = Pattern.compile("\\:\\:");
@@ -148,7 +153,7 @@ public class RecursiveDescentParser {
      */
     private boolean parameter_set() throws ConfigParseException {
         if(consume('(')) {
-            while(consume(parameter)) {
+            while(consume(parameter_identifier)) {
                 //! TODO: maybe we should save parameter values somewhere?
                 if(consume(')')) {
                     return true;
@@ -174,48 +179,11 @@ public class RecursiveDescentParser {
      * @throws ConfigParseException if a syntax error is encountered
      */
     private boolean parameterized_identifier() throws ConfigParseException {
-        if(consume(identifier)) {
+        if(consume(parameter_identifier)) {
             //! TODO: save identifier values (along with any parameters)
             //! somewhere, perhaps?
 
             parameter_set(); // optional; disregard return value for now
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * Attempts to match a pipeline input specifier.
-     *
-     * The rule defining input specifiers is:
-     * `input_specifier =
-     *      identifier, '.', identifier, '::', [parameterized_identifier];`
-     * where the first two identifiers are the device and input names,
-     * respectively, and the parameterized identifier is an optional filter.
-     *
-     * @return true if this token can be found, false otherwise
-     * @throws ConfigParseException if a syntax error is encountered
-     */
-    private boolean input_specifier() throws ConfigParseException {
-        if(consume(identifier)) {
-            //! TODO: should probably store input device somewhere
-            if(!consume('.')) throw new ConfigParseException(
-                "input_specifier: expected '.'"
-            );
-
-            if(!consume(identifier)) throw new ConfigParseException(
-                "input_specifier: expected input name"
-            );
-
-            //! TODO: should store input name somewhere too
-
-            if(!consume(doubleColon)) throw new ConfigParseException(
-                "input_specifier: expected '::'"
-            );
-
-            //! TODO: also store filter values / parameter somewhere
-            parameterized_identifier();
             return true;
         } else {
             return false;
@@ -256,7 +224,7 @@ public class RecursiveDescentParser {
      */
     private boolean pipeline_callback() throws ConfigParseException {
         if(consume(pipelineEnd)) {
-            if(!consume(identifier)) throw new ConfigParseException(
+            if(!consume(parameter_identifier)) throw new ConfigParseException(
                 "pipeline_callback: expected identifier"
             );
 
@@ -269,6 +237,98 @@ public class RecursiveDescentParser {
     }
 
     /**
+     * Attempts to match a pipeline sequence.
+     *
+     * The rule defining pipeline sequences is:
+     * `pipeline_sequence =
+     *      '|->|', pipeline_callback
+     *      | pipeline_stage, { pipeline_stage }, pipeline_callback;`
+     */
+    private boolean pipeline_sequence() throws ConfigParseException {
+        if(consume(pipelineIdentity)) {
+            if(!consume(pipeline_callback)) throw new ConfigParseException(
+                "pipeline_sequence: expected pipeline callback specifier"
+            );
+        } else if(pipeline_stage()) {
+            while(pipeline_stage()) {};
+
+            if(!consume(pipeline_callback)) throw new ConfigParseException(
+                "pipeline_sequence: expected pipeline callback specifier"
+            );
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Attempts to match a pipeline process specification.
+     *
+     * The rule defining these is:
+     * `process = '::', [parameterized_identifier], pipeline_sequence;`.
+     */
+    private boolean process() throws ConfigParseException {
+        if(consume(doubleColon)) {
+            parameterized_identifier();
+
+            if(!pipeline_sequence()) throw new ConfigParseException(
+                "process: expected pipeline sequence"
+            );
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Attempts to match a pipeline process set.
+     *
+     * The rule defining these is:
+     * `process_set = process, {',', process};`
+     */
+    private boolean process_set() throws ConfigParseException {
+        if(process()) {
+            while(consume(',')) {
+                if(!process()) throw new ConfigParseException(
+                    "process_set: expected pipeline process specification"
+                );
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean input() throws ConfigParseException {
+        if(consume('.')) {
+            if(!consume(parameter_identifier)) throw new ConfigParseException(
+                "input: expected identifier"
+            );
+
+            if(!process_set) throw new ConfigParseException(
+                "input: expected pipeline process specification set"
+            );
+        }
+
+        return false;
+    }
+
+    private boolean input_set() throws ConfigParseException {
+        if(input()) {
+            while(consume(',')) {
+                if(!input()) throw new ConfigParseException(
+                    "input_set: expected pipeline input specification"
+                );
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Attempts to match a pipeline definition.
      *
      * The rule defining pipeline definitions is:
@@ -278,21 +338,11 @@ public class RecursiveDescentParser {
      * @throws ConfigParseException if a syntax error is encountered
      */
     private boolean pipeline() throws ConfigParseException {
-        if(input_specifier()) {
-            //! TODO: probably should save pipeline input data somewhere
+        if(!consume(parameter_identifier)) {
+            //! TODO: probably should save pipeline input device somewhere
 
-            while(pipeline_stage()) {
-                //! TODO: we should probably save pipeline stages somewhere
-            };
-
-            if(!pipeline_callback()) throw new ConfigParseException(
-                "pipeline: expected pipeline callback specifier"
-            );
-
-            //! TODO: should also save pipeline callback data somewhere
-
-            if(!consume(';')) throw new ConfigParseException(
-                "pipeline: expected semicolon"
+            if(!input_set()) throw new ConfigParseException(
+                "pipeline: expected pipeline input set"
             );
 
             return true;
