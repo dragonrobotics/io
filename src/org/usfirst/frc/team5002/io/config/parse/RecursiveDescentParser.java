@@ -22,7 +22,7 @@
  * parameter_set = '(', { ident_or_param, ',' }, ident_or_param, ')';
  * parameterized_identifier = ident_or_param, [parameter_set];
  *
- * pipeline_stage = '|->', parameterized_identifier;
+ * pipeline_stage = '|->' | '->', parameterized_identifier;
  * pipeline_sequence = '|->|', ident_or_param
  *                   | pipeline_stage, { pipeline_stage }, '->|', pipeline_callback;
  *
@@ -56,8 +56,8 @@ public class RecursiveDescentParser {
     private static final Pattern parameter_identifier =
         Pattern.compile("(?:\\-?\\d+(?:\\.\\d+)?)|[\\w[\\-]]+");
 
-    //! Matches '|->' (token beginning pipeline stages)
-    private static final Pattern stageBegin = Pattern.compile("\\|\\-\\>");
+    //! Matches '|->' or '->' (tokens beginning pipeline stages)
+    private static final Pattern stageBegin = Pattern.compile("\\|?\\-\\>");
 
     //! Matches '->|' (token ending pipelines)
     private static final Pattern pipelineEnd = Pattern.compile("\\-\\>\\|");
@@ -223,6 +223,12 @@ public class RecursiveDescentParser {
      */
     private ParameterizedIdentifier pipeline_stage() throws ConfigParseException {
         if(consume(stageBegin)) {
+            if(consume('|')) {
+                // we just matched ->|.
+                // backtrack three characters so we can match the pipeline end
+                matcher.region(matcher.regionStart()-3, matcher.regionEnd());
+                return null;
+            }
             ParameterizedIdentifier retn = parameterized_identifier();
             if(retn == null) throw new ConfigParseException(
                 "pipeline_stage: expected identifier"

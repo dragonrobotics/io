@@ -63,20 +63,17 @@ class RDParserTest {
     }
 
     public static void main(String[] args) {
-        String parserTest1 = "gamepad1.left_joystick_y :: always  |-> foc ->| forward;";
-        String parserTest2 = "10";
-        String parserTest3 = "this.causes :: an |-> error";
         String parserTest4 =
             "gamepad1.right_joystick_x\n"+
             "   :: always |->| logging, # note the comma at the end of this line.\n"+
             "   # and the semicolon terminating the whole statement.\n"+
             "   :: changed |-> deadband(0.01) |-> FOC ->| twist;\n";
-        String parserTest5 = "gamepad1.right_joystick_x :: |->| logging";
 
-        parsingTest(parserTest1);
-        parsingTest(parserTest2);
-        parsingTest(parserTest3);
+        parsingTest("gamepad1.left_joystick_y :: always  |-> foc ->| forward;");
+        parsingTest("10");
+        parsingTest("this.causes :: an |-> error");
+        parsingTest("this.however :: is -> not -> an ->| error");
         parsingTest(parserTest4);
-        parsingTest(parserTest5);
+        parsingTest("gamepad1.right_joystick_x :: |->| logging");
     }
 }
