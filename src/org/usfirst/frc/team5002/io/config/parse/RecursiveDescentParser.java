@@ -17,15 +17,14 @@
  * digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
  * character = letter | digit | "_" | "-";
  *
- * ident_or_param = character, { character };
+ * ident_or_param = character, { character } | digit, '.', {digit};
  *
  * parameter_set = '(', { ident_or_param, ',' }, ident_or_param, ')';
  * parameterized_identifier = ident_or_param, [parameter_set];
  *
  * pipeline_stage = '|->', parameterized_identifier;
- * pipeline_callback = '->|', ident_or_param;
- * pipeline_sequence = '|->|', pipeline_callback
- *                     | pipeline_stage, { pipeline_stage }, pipeline_callback;
+ * pipeline_sequence = '|->|', ident_or_param
+ *                   | pipeline_stage, { pipeline_stage }, '->|', pipeline_callback;
  *
  * process = '::', [parameterized_identifier], pipeline_sequence;
  * process_set = process, {',', process};
@@ -46,13 +45,16 @@ package org.usfirst.frc.team5002.io.config.parse;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.util.regex.MatchResult;
+import java.util.ArrayList;
 import org.usfirst.frc.team5002.io.config.exception.ConfigParseException;
 
 
 public class RecursiveDescentParser {
     //! Matches parameter and identifier values: a sequence of one or more
     //! letters / digits / hyphens / underscores.
-    private static final Pattern parameter_identifier = Pattern.compile("[\\w[\\-]]+");
+    //! It also matches floating point numbers, which is a bit of a hack.
+    private static final Pattern parameter_identifier =
+        Pattern.compile("(?:\\-?\\d+(?:\\.\\d+)?)|[\\w[\\-]]+");
 
     //! Matches '|->' (token beginning pipeline stages)
     private static final Pattern stageBegin = Pattern.compile("\\|\\-\\>");
@@ -66,8 +68,9 @@ public class RecursiveDescentParser {
     //! Matches '::' (token in pipeline input specifiers)
     private static final Pattern doubleColon = Pattern.compile("\\:\\:");
 
-    //! Matches whitespace and comments
-    private static final Pattern skipspace = Pattern.compile("\\s*#[^\\n]*\\n");
+    //! Matches whitespace and (possibly multiple lines of) comments
+    private static final Pattern skipspace =
+        Pattern.compile("(?:(?:#[^\\n]*\\n)|\\s)+");
 
     private String input;
     private Matcher matcher;
@@ -79,7 +82,7 @@ public class RecursiveDescentParser {
 
     public RecursiveDescentParser(String input) {
         this.input = input;
-        this.matcher = identifier.matcher(input);
+        this.matcher = parameter_identifier.matcher(input);
     }
 
     /**
@@ -161,12 +164,15 @@ public class RecursiveDescentParser {
                 if(consume(')')) {
                     return returnList;
                 } else if(!consume(',')) {
-                    throw new ConfigParseException("parameter_set: expected ','");
+                    throw new ConfigParseException(
+                        "parameter_set: expected ','"+parseErrorInfo()
+                    );
                 }
             }
 
             throw new ConfigParseException(
                 "parameter_set: expected at least one parameter"
+                +parseErrorInfo()
             );
         } else {
             return null;
@@ -220,6 +226,7 @@ public class RecursiveDescentParser {
             ParameterizedIdentifier retn = parameterized_identifier();
             if(retn == null) throw new ConfigParseException(
                 "pipeline_stage: expected identifier"
+                +parseErrorInfo()
             );
 
             return retn;
@@ -241,6 +248,7 @@ public class RecursiveDescentParser {
         if(consume(pipelineEnd)) {
             if(!consume(parameter_identifier)) throw new ConfigParseException(
                 "pipeline_callback: expected identifier"
+                +parseErrorInfo()
             );
 
             return lastConsumedToken.group();
@@ -266,10 +274,12 @@ public class RecursiveDescentParser {
         throws ConfigParseException
     {
         if(consume(pipelineIdentity)) {
-            String callbackIdentifier = pipeline_callback();
-            if(callbackIdentifier == null) throw new ConfigParseException(
-                "pipeline_sequence: expected pipeline callback specifier"
+            if(!consume(parameter_identifier)) throw new ConfigParseException(
+                "pipeline_sequence: expected pipeline callback specifier for identity pipeline"
+                +parseErrorInfo()
             );
+
+            String callbackIdentifier = lastConsumedToken.group();
 
             spec.setStages(new ArrayList<ParameterizedIdentifier>());
             spec.setCallback(callbackIdentifier);
@@ -283,14 +293,24 @@ public class RecursiveDescentParser {
                 new ArrayList<ParameterizedIdentifier>();
 
             stageList.add(stageData);
-            while(stageData = pipeline_stage()) {
+            while((stageData = pipeline_stage()) != null) {
                 stageList.add(stageData);
             };
 
-            String callback = pipeline_callback();
-            if(callback == null) throw new ConfigParseException(
-                "pipeline_sequence: expected pipeline callback specifier"
+
+            if(!consume(pipelineEnd)) {
+                throw new ConfigParseException(
+                    "pipeline_sequence: expected '->|' after stages"
+                    +parseErrorInfo()
+                );
+            }
+
+            if(!consume(parameter_identifier)) throw new ConfigParseException(
+                "pipeline_sequence: expected pipeline callback specifier after stages"
+                +parseErrorInfo()
             );
+
+            String callback = lastConsumedToken.group();
 
             spec.setStages(stageList);
             spec.setCallback(callback);
@@ -330,6 +350,7 @@ public class RecursiveDescentParser {
 
             if(!pipeline_sequence(spec)) throw new ConfigParseException(
                 "process: expected pipeline sequence"
+                +parseErrorInfo()
             );
 
             return spec;
@@ -361,33 +382,20 @@ public class RecursiveDescentParser {
         );
 
         PipelineSpecification spec = process(device, input, defaultFilter);
-        if(spec) {
+        if(spec != null) {
             specList.add(spec);
 
             // chained pipeline specs reuse filters
             defaultFilter = spec.filter();
 
             while(consume(',')) {
-                spec = process();
+                spec = process(device, input, defaultFilter);
 
                 if(spec == null) {
-                    /* The language spec is slightly ambiguous here;
-                     * the following token could be either a process spec
-                     * or a new input spec-- we have to disambiguate by looking
-                     * ahead by one token, without consuming it.
-                     */
-                    if(matcher.regionStart() < input.length() &&
-                        (
-                            input.charAt(matcher.regionStart()) == '.' ||
-                            input.charAt(matcher.regionStart()) == ';'
-                        )
-                    ) {
-                        break; // this is not a new process spec -- exit
-                    } else {
-                        throw new ConfigParseException(
-                            "process_set: expected pipeline process specification"
-                        );
-                    }
+                    throw new ConfigParseException(
+                        "process_set: expected pipeline process specification"
+                        +parseErrorInfo()
+                    );
                 }
 
                 specList.add(spec);
@@ -416,6 +424,7 @@ public class RecursiveDescentParser {
         if(consume('.')) {
             if(!consume(parameter_identifier)) throw new ConfigParseException(
                 "input: expected identifier"
+                +parseErrorInfo()
             );
 
             String input = lastConsumedToken.group();
@@ -423,6 +432,7 @@ public class RecursiveDescentParser {
             if(!process_set(device, input, specList)) {
                 throw new ConfigParseException(
                     "input: expected pipeline process specification set"
+                    +parseErrorInfo()
                 );
             }
 
@@ -449,6 +459,7 @@ public class RecursiveDescentParser {
             while(consume(',')) {
                 if(!input(device, specList)) throw new ConfigParseException(
                     "input_set: expected pipeline input specification"
+                    +parseErrorInfo()
                 );
             }
 
@@ -465,16 +476,20 @@ public class RecursiveDescentParser {
      * pipeline specification, or null if one could not be parsed.
      * @throws ConfigParseException if a syntax error is encountered
      */
-    private ArrayList<PipelineSpecification> pipeline() {
-        if(!parser.consume(parameter_identifier)) {
+    private ArrayList<PipelineSpecification> pipeline()
+        throws ConfigParseException
+    {
+        if(!consume(parameter_identifier)) {
             return null;
         }
 
+        String device = lastConsumedToken.group();
         ArrayList<PipelineSpecification> specList
             = new ArrayList<PipelineSpecification>();
 
-        if(!input_set()) throw new ConfigParseException(
+        if(!input_set(device, specList)) throw new ConfigParseException(
             "pipeline: expected pipeline input set"
+            +parseErrorInfo()
         );
 
         if(consume(';') || matcher.regionStart() == input.length()) {
@@ -482,10 +497,78 @@ public class RecursiveDescentParser {
         } else {
             throw new ConfigParseException(
                 "pipeline: expected terminating semicolon or EOF"
+                +parseErrorInfo()
             );
         }
+    }
 
-        return null;
+    /**
+     * Finds and dumps some basic info for debugging parse errors.
+     *
+     * This might be better off returning a structure containing the info
+     * in a more machine-usable format or an object.
+     */
+    private String parseErrorInfo() {
+        int currentAbsPos = matcher.regionStart();
+
+        //! Dump rest of currently parsed line.
+        matcher.usePattern(Pattern.compile("[^\\n]*\\n"));
+        String restOfLine = "<empty>";
+
+        if(matcher.lookingAt()) restOfLine = matcher.group();
+
+        matcher.usePattern(Pattern.compile("(\\n)"));
+        matcher.region(0, matcher.regionEnd());
+
+        int lineNo;
+        int linePos;
+        String errorLine;
+
+        if(matcher.find()) {
+            lineNo = matcher.groupCount();
+            linePos = matcher.start(matcher.groupCount()) - currentAbsPos;
+            for(int i=0;i<matcher.groupCount()-1;i++) {
+                int lineStartAbs = matcher.start(i);
+                int lineEndAbs = matcher.start(i+1);
+
+                if(lineStartAbs <= currentAbsPos && lineEndAbs >= currentAbsPos) {
+                    lineNo = i;
+                    linePos = lineStartAbs - currentAbsPos;
+                    break;
+                }
+            }
+
+            if(lineNo != matcher.groupCount()) {
+                errorLine = input.substring(
+                    matcher.start(lineNo),
+                    matcher.start(lineNo+1)
+                );
+            } else {
+                errorLine = input.substring(matcher.start(lineNo));
+            }
+        } else {
+            // single-line
+            lineNo = 0;
+            linePos = currentAbsPos;
+            errorLine = input;
+        }
+
+
+
+        StringBuilder b = new StringBuilder();
+        b.append("\nat line ")
+        .append(lineNo)
+        .append(':')
+        .append(linePos)
+        .append(" : \n")
+        .append(errorLine)
+        .append('\n');
+
+        // fill with spaces to linePos
+        for(int i=0;i<linePos-1;i++) b.append(' ');
+        b.append("^");
+
+        return b.toString();
     }
 
     /**
@@ -504,8 +587,8 @@ public class RecursiveDescentParser {
             = new ArrayList<PipelineSpecification>();
 
         ArrayList<PipelineSpecification> subList;
-        while(subList = parser.pipeline()) {
-            specList.add(subList);
+        while((subList = parser.pipeline()) != null) {
+            specList.addAll(subList);
         }
 
         return specList;

@@ -1,5 +1,7 @@
 package org.usfirst.frc.team5002.io.config.parse;
 
+import java.util.ArrayList;
+
 public class PipelineSpecification {
     private String device;
     private String input;
@@ -7,7 +9,7 @@ public class PipelineSpecification {
     private String callback;
     private ArrayList<ParameterizedIdentifier> stages;
 
-    public constructor(
+    public PipelineSpecification(
         String device, String input, ParameterizedIdentifier filter)
     {
         this.device = device;
