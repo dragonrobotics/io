@@ -20,12 +20,11 @@
 <table cellspacing="0" cellpadding="0">
  <tbody>
  <tr style="height: 56px;">
-  <td id="projectlogo"><img alt="Logo" src="iota.jpg"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">iota
    &#160;<span id="projectnumber">1.0.0</span>
    </div>
-   <div id="projectbrief">Flexible,pipeline-basedinputhandling.</div>
+   <div id="projectbrief">Flexible, pipeline-based input handling.</div>
   </td>
  </tr>
  </tbody>
@@ -61,7 +60,7 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><b>iota</b></li><li class="navelem"><a class="el" href="classiota_1_1Poller.html">Poller</a></li>  </ul>
+<li class="navelem"><a class="el" href="namespaceiota.html">iota</a></li><li class="navelem"><a class="el" href="classiota_1_1Poller.html">Poller</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
@@ -72,21 +71,27 @@ $(function() {
 <div class="title">iota.Poller Class Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Poll inputs and listen for changes.  
+ <a href="classiota_1_1Poller.html#details">More...</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a235f4c182074a239da93e63452fbee9b"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classiota_1_1Poller.html#a235f4c182074a239da93e63452fbee9b">on</a> (input_callback, event_name, pipeline, callback)</td></tr>
-<tr class="separator:a235f4c182074a239da93e63452fbee9b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae6816f7f7816d7ef7107d0fc31c36546"><td class="memItemLeft" align="right" valign="top"><a id="ae6816f7f7816d7ef7107d0fc31c36546"></a>
-def&#160;</td><td class="memItemRight" valign="bottom"><b>tick</b> ()</td></tr>
+<tr class="memitem:a35f84cee5cf71dfdf6ba6ced23c078d7"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classiota_1_1Poller.html#a35f84cee5cf71dfdf6ba6ced23c078d7">on</a> (input_callback, event_name, pipeline, callback, taplength=150)</td></tr>
+<tr class="memdesc:a35f84cee5cf71dfdf6ba6ced23c078d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add an input to the poller.  <a href="#a35f84cee5cf71dfdf6ba6ced23c078d7">More...</a><br /></td></tr>
+<tr class="separator:a35f84cee5cf71dfdf6ba6ced23c078d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae6816f7f7816d7ef7107d0fc31c36546"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classiota_1_1Poller.html#ae6816f7f7816d7ef7107d0fc31c36546">tick</a> ()</td></tr>
+<tr class="memdesc:ae6816f7f7816d7ef7107d0fc31c36546"><td class="mdescLeft">&#160;</td><td class="mdescRight">Poll all the inputs.  <a href="#ae6816f7f7816d7ef7107d0fc31c36546">More...</a><br /></td></tr>
 <tr class="separator:ae6816f7f7816d7ef7107d0fc31c36546"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock">
-<p class="definition">Definition at line <a class="el" href="iota_8py_source.html#l00005">5</a> of file <a class="el" href="iota_8py_source.html">iota.py</a>.</p>
+<div class="textblock"><p>Poll inputs and listen for changes. </p>
+<p>This class will poll inputs and listen for changes, and then run pipelines and callbacks once a change is detected. This class is also responsible for detecting and recognizing different, more high-level types of inputs, which are defined in the <code><a class="el" href="classiota_1_1Events.html" title="Define high-level events for polling. ">Events</a></code> class. </p>
+
+<p class="definition">Definition at line <a class="el" href="iota_8py_source.html#l00038">38</a> of file <a class="el" href="iota_8py_source.html">iota.py</a>.</p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="a235f4c182074a239da93e63452fbee9b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a235f4c182074a239da93e63452fbee9b">&#9670;&nbsp;</a></span>on()</h2>
+<a id="a35f84cee5cf71dfdf6ba6ced23c078d7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a35f84cee5cf71dfdf6ba6ced23c078d7">&#9670;&nbsp;</a></span>on()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -113,7 +118,13 @@ def&#160;</td><td class="memItemRight" valign="bottom"><b>tick</b> ()</td></tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>callback</em>&#160;</td>
+          <td class="paramname"><em>callback</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname"><em>taplength</em> = <code>150</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -122,44 +133,42 @@ def&#160;</td><td class="memItemRight" valign="bottom"><b>tick</b> ()</td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<pre class="fragment">Test doxypypy.
 
-This is an example of how a Pythonic human-readable docstring can
-get parsed by doxypypy and marked up with Doxygen commands as a
-regular input filter to Doxygen.
+<p>Add an input to the poller. </p>
+<p>When the poller recognizes the event, it will pass the input through the pipeline and call the callback with the resulting value.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">input_callback</td><td>The callback for getting the input. This can be a function that returns <code>wpilib.Joystick.getRawAxis(x)</code>, for example. </td></tr>
+    <tr><td class="paramname">event_name</td><td>An <code><a class="el" href="classiota_1_1Events.html" title="Define high-level events for polling. ">Events</a></code> enum value describing what to listen for. </td></tr>
+    <tr><td class="paramname">pipeline</td><td>The pipeline. This is passed directly into a <code><a class="el" href="classiota_1_1Pipeline.html" title="A simplistic but flexible pipeline implementation. ">Pipeline</a></code> constructor. Thus, this value can be of any type supported by the <code><a class="el" href="classiota_1_1Pipeline.html#ab4cb3e29d6da7ff4ce299458a6c399e8" title="Add steps to the pipline. ">Pipeline.add()</a></code> function. </td></tr>
+    <tr><td class="paramname">taplength</td><td>Define how long, in milliseconds, a tap is. This is by default 150ms. You can also set taplength to 0ms to make the poller call <a class="el" href="classiota_1_1Events.html#aea1d70a3d1638b92fc4b4d1a499c873e" title="Run the pipeline when a PRESSED action has been detected. ">Events.PRESSED</a> immediately, if you really don't care for the distinction between tapping and pressing. </td></tr>
+  </table>
+  </dd>
+</dl>
 
-Args:
-    input_callback:   A positional argument.
-    arg2:   Another positional argument.
+<p class="definition">Definition at line <a class="el" href="iota_8py_source.html#l00063">63</a> of file <a class="el" href="iota_8py_source.html">iota.py</a>.</p>
 
-Kwargs:
-    kwarg:  A keyword argument.
+</div>
+</div>
+<a id="ae6816f7f7816d7ef7107d0fc31c36546"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae6816f7f7816d7ef7107d0fc31c36546">&#9670;&nbsp;</a></span>tick()</h2>
 
-Returns:
-    A string holding the result.
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">def iota.Poller.tick </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
 
-Raises:
-    ZeroDivisionError, AssertionError, &amp; ValueError.
+<p>Poll all the inputs. </p>
+<p>This function probably shouldn't be called anywhere besides in a specialized Command class that is run over and over again by the main Robot class. However, it should be called often, as much of the functionality depends on millisecond speeds to measure and detect high-level input patterns. <b>TODO</b>: Perhaps consider polling and executing pipelines asynchronously. This isn't implemented yet because it might not be necessary (I doubt it will be), and it might not even be a performance boost depending on the roborio hardware. </p>
 
-Examples:
-    &gt;&gt;&gt; myfunction(2, 3)
-    '5 - 0, whatever.'
-    &gt;&gt;&gt; myfunction(5, 0, 'oops.')
-    Traceback (most recent call last):
-...
-    ZeroDivisionError: integer division or modulo by zero
-    &gt;&gt;&gt; myfunction(4, 1, 'got it.')
-    '5 - 4, got it.'
-    &gt;&gt;&gt; myfunction(23.5, 23, 'oh well.')
-    Traceback (most recent call last):
-...
-    AssertionError
-    &gt;&gt;&gt; myfunction(5, 50, 'too big.')
-    Traceback (most recent call last):
-...
-    ValueError
-</pre> 
-<p class="definition">Definition at line <a class="el" href="iota_8py_source.html#l00012">12</a> of file <a class="el" href="iota_8py_source.html">iota.py</a>.</p>
+<p class="definition">Definition at line <a class="el" href="iota_8py_source.html#l00092">92</a> of file <a class="el" href="iota_8py_source.html">iota.py</a>.</p>
 
 </div>
 </div>
