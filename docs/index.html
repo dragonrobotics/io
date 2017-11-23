@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.14"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>iota: WHY HELLO THERE</title>
+<title>iota: Flexible, pipeline-based input handling.</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -20,12 +20,11 @@
 <table cellspacing="0" cellpadding="0">
  <tbody>
  <tr style="height: 56px;">
-  <td id="projectlogo"><img alt="Logo" src="iota.jpg"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">iota
    &#160;<span id="projectnumber">1.0.0</span>
    </div>
-   <div id="projectbrief">Flexible,pipeline-basedinputhandling.</div>
+   <div id="projectbrief">Flexible, pipeline-based input handling.</div>
   </td>
  </tr>
  </tbody>
@@ -62,16 +61,21 @@ $(function() {
 
 <div class="header">
   <div class="headertitle">
-<div class="title">WHY HELLO THERE </div>  </div>
+<div class="title">Flexible, pipeline-based input handling. </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>this is a doxygenmd Test</p>
-<div class="fragment"><div class="line">print(hello)</div></div><!-- fragment --><h2>section header</h2>
-<ul>
-<li>bullet</li>
-<li>points</li>
-</ul>
-<p><em>italics</em> and <b>bold text</b> maybe? please? </p>
+<div class="textblock"><p><code>iota</code> is a small, lightweight abstraction over the default WPILib functions for handling joystick inputs, and extends its functionality to any kind of input, whether through SmartDashboard, joystick, or sensor. Any value that can be polled can be handled by <code>iota</code>.</p>
+<p>Furthermore, <code>iota</code> provides an elegant, simplistic pipeline implementation in which reusable steps can be chained together. Often, inputs are not directly applied to motor speeds; they are modified somehow. With <code>iota</code>, this occurs by passing the input through a pipeline and then running a callback with the resulting, transformed input.</p>
+<h3>Notes on the name.</h3>
+<p><code>iota</code> started out simply named <code>io</code>. However, this conflicts with <code>io</code>, which is a Python core library, so trying to import <code>io</code> would implement the core library instead of what is actually wanted. The word "iota" contains "io", means "a very small amount" (the main code, <code><a class="el" href="iota_8py_source.html">iota.py</a></code>, is only 72 SLOC uncommented), and is pretty easy to type (being 4 letters long), so I just decided to name it that.</p>
+<h3>Notes on the language</h3>
+<p><code>iota</code>, like all the other code written by FRC Team 5002 from the 2017-2018 season onwards, is written in Python. In fact, <code>iota</code> was a major reason why we switched from Java to Python; Python allowed us much more flexibility with its dynamic typing and tuples than Java ever could. In fact, just the pipeline implementation in Java was already longer than the entire <code>iota</code> in Python, and heavily generics-based and unreadable. With Python, "it just
+works".</p>
+<h3>Notes on the usage</h3>
+<p>Most detailed information on the usage of <code>iota</code> can be found in this documentation. This is only meant as a quick overview.</p>
+<p><code>iota</code> is used by constructing a pipeline and adding it to the poller. For example,</p>
+<div class="fragment"><div class="line">from iota import *</div><div class="line"></div><div class="line">pipe = Pipeline()</div><div class="line">pipe.add(lambda x : not x, float)</div><div class="line">Poller.on(gamepad1.x, Events.PRESSED, pipe, setServoSpeed)</div></div><!-- fragment --><p>where <code>gamepad1.x</code> is a function that returns the value of <code>x</code>, Events.PRESSED is an enum value telling the poller to only run the pipeline when a PRESSED action has been detected, <code>pipe</code> is the pipeline of steps, and <code>setServoSpeed</code> is an example callback that actually applies the changes to the hardware.</p>
+<p>More information can be found in documentation. </p>
 </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -20,12 +20,11 @@
 <table cellspacing="0" cellpadding="0">
  <tbody>
  <tr style="height: 56px;">
-  <td id="projectlogo"><img alt="Logo" src="iota.jpg"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">iota
    &#160;<span id="projectnumber">1.0.0</span>
    </div>
-   <div id="projectbrief">Flexible,pipeline-basedinputhandling.</div>
+   <div id="projectbrief">Flexible, pipeline-based input handling.</div>
   </td>
  </tr>
  </tbody>
@@ -66,25 +65,6 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><h1 align="center">io :unicorn:</h1>
-<p><b>io</b> is an experimental system for handling inputs of all types, whether by joystick or sensor. It is based off of the <a href="https://www.cise.ufl.edu/research/ParallelPatterns/PatternLanguage/AlgorithmStructure/Pipeline.htm">Pipeline Design Pattern</a>, in which inputs can be passed through a series of stages to be transformed in an elegant fashion.</p>
-<p>Furthermore, <b>io</b> abstracts away raw input sources, allowing:</p><ul>
-<li>sensor inputs to be treated exactly the same as gamepad inputs, and</li>
-<li>gamepad inputs to be easily remapped without having to recompile the code.</li>
-</ul>
-<h3>Progress Update</h3>
-<p>Unfortunately, due to random bugs and an underestimation on the time frame, <b>io</b> is <em>still</em> not done even after moving the deadline back once. But here's a progress update anyways.</p>
-<h4>So far, I have implemented:</h4>
-<ul>
-<li>a flexible, typesafe, generic pipeline implementation allowing for full flexibility in chaining together different pipeline stages of different types.</li>
-<li><code>Input</code> and <code>InputGroup</code> base classes.</li>
-<li>A PML configuration parser.</li>
-<li>an extension over HashMap doing null checks and key verification.</li>
-</ul>
-<h4>What still needs to be done:</h4>
-<ul>
-<li>Implementing Factory-style manager classes for the parser to be able to connect string representations to actual classes.</li>
-<li>Implementing a tick-based input poller. I have a very primitive one written right now, but it most likely doesn't work and it most definitely does not allow for listening for more complex events. </li>
-</ul>
 </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
