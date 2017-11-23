@@ -1,2 +1,1 @@
-# io
-A new pipeline-style input handling system
+<h1 align="center">io :unicorn:</h1>
